@@ -43,7 +43,7 @@ typedef struct graph
 
 typedef struct topo_lst
 {
-   struct node *neste;
+   struct node *next;
    int found;
 }topo_lst;
 
@@ -102,7 +102,7 @@ void queue_free(queue *q)
 //Datastructure for search
 #define infinity 1000000000
 
-
+//Do we need this method???
 graph* new_graph(int node_count)
 {
     graph *new_graph = (graph *)malloc(sizeof(graph));
@@ -123,7 +123,7 @@ int count_edges(node* n)
     return count;
 }
 
-
+//Do we need this method????
 void set_text_value(node *n, void* text)
 {
     n->text=(char*) text;
@@ -139,6 +139,7 @@ void read_lines(const int *values, size_t size)
     };
 }
 
+//Burde calle en print method her for å printe resultatet fra søket?
 void bfsv2(graph *g, int srcNodeId, int dstNodeId)
 {
     queue *q = new_queue(g->node_count - 1);
@@ -192,19 +193,19 @@ void print_distance_prev(graph *g, node* start)
     }
 }
 /* DFS help method for topological sort */
-node* df_topo(node *start, node *end)
+node* df_topo(node *n, node *l)
 {
-    topo_lst *tpl=start->node_number;
-    if(start->node_number==end->node_number) return end;
-    tpl->found = false;
+    topo_lst *tpl=n->edges->next;
+    if(n->found) return l;
+
+    tpl->found = 1;
     
-    edge *e=start->edges;
-    while(e != NULL)
+    for(edge *e=n->edges; e; e=e->next)
     {
-        end = df_topo(e->next, end);
+        l = df_topo(e->next, l);
     }
-    tpl->neste = end;
-    return start; //returns input?
+    tpl->next = l;
+    return n;
 }
 
 /**
@@ -214,14 +215,19 @@ node *topologicalSort(graph *g)
 {
     node *end = 0;
     for(int i = g->node_count - 1; i--;)
-    {
-        g->nodes[i] = calloc(sizeof(topo_lst), 1); // void* cannot be assigned to entity of type node
+    {node
+        g->nodes[i] = calloc(sizeof(topo_lst), 1); // void* cannot be assigned to entity of type 
     }
     for(int i = g->node_count - 1; i--;)
     {
        end = df_topo(&g->node_count[i], end); //  expression must have pointer-to-object type but has type int [i]
     }
     return end;
+}
+
+void print_topologica_sorted_graph(node* n)
+{
+    
 }
 
 
@@ -339,9 +345,7 @@ graph *parse_graphfile(const char *graphfile)
     munmap(data, length);
 }
 
-/*
-PLS NO REMOVE <3
-graph *parse_graphfile(const char *graphfile)
+void parse_namefile(graph *g, const char *graphfile)
 {
     int i = 0;
     int length;
@@ -350,28 +354,14 @@ graph *parse_graphfile(const char *graphfile)
     // read header line
     int node_count = atoi(&data[i]);
     find_next_token(data, length, &i);
-    int edge_count = atoi(&data[i]);
-    find_next_token(data, length, &i);
-    
-    graph *g = calloc(1, sizeof(graph));
-    g->node_count = node_count;
-    g->nodes = calloc(node_count, sizeof(node));
 
     for (int l = 0; i < length; l++)
     {
         int node_id = atoi(&data[i]);
 
         if (find_next_token(data, length, &i)) continue;
-        int edge_dst_id = atoi(&data[i]);
-        if (node_id < node_count && edge_dst_id < node_count)
-        {
-            node *n = &g->nodes[node_id];
-            edge *e = malloc(sizeof(edge));
-            e->next = n->edges;
-            n->edges = e;
-        }
-
         if (find_next_token(data, length, &i)) continue;
+
         if (node_id < node_count)
         {
             g->nodes[node_id].text = parse_string(data, length, &i);
@@ -382,9 +372,8 @@ graph *parse_graphfile(const char *graphfile)
 
     munmap(data, length);
 }
-*/
 
-void run_with_files(const char *graphfile, const char *namefile)
+graph* run_with_files(const char *graphfile, const char *namefile)
 {
     graph *g = parse_graphfile(graphfile);
     if (g == NULL)
@@ -393,8 +382,9 @@ void run_with_files(const char *graphfile, const char *namefile)
     }
     if (namefile != NULL)
     {
-        parse_graphfile(&g, namefile);
+        parse_namegraph(g, namefile);
     }
+    return graph;
 }
 
 int main(int argc, const char *argv[])
@@ -410,6 +400,8 @@ int main(int argc, const char *argv[])
         );
         return 1;
     }
-    run_with_files(graphfile, namefile);
+    graph* graph = run_with_files(graphfile, namefile);
+
+        
     return 0;
 }
