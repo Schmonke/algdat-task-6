@@ -1,5 +1,4 @@
 #include <stdio.h>
-#include <sys/mman.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -41,7 +40,7 @@ typedef struct node
 // Graph 
 typedef struct graph
 {
-    node* nodes; 
+    node *nodes; 
     int node_count;
 } graph;
 
@@ -191,30 +190,30 @@ void print_distance_prev(graph *g)
 graph* graph_transpose(graph *g)
 {
     const int node_count = g->node_count;
-    graph *t = (graph *){
-        .node_count = node_count,
-        .nodes = calloc(node_count, sizeof(node)),
-    };
+    graph *t = (graph *)calloc(node_count, sizeof(node));
+    t->node_count = node_count;
 
     for (int i = 0; i < node_count; i++)
     {
-        t.nodes[i] = g->nodes[i];
+        t->nodes[i] = g->nodes[i];
     }
     
     // loop over all the nodes
     // get the edges for that node, and reverse the direction:
     //      index is source and dst_node_id is destination
     // thereafter we set the edge into the dest node
+    
+    edge *e = g->nodes[0].edges;
     for (int i = 0; i < node_count; i++)
     {   
-        for(edge *e=g.nodes[i]->edges; e; e=e->next)
+        for(edge *e; e; e=e->next)
         {
-        int dst_id = g->nodes[i].edges->dst_node_id;
+        int dst_id = &g->nodes[i]->edges->dst_node_id;
         edge *next_edge = e->next; //maybe is right?
         t.nodes[dst_id]->edges = new_edge(dst_id, next_edge);
         }
     }
-    return t;    
+    return t;
 }
 
 
@@ -225,7 +224,7 @@ void dfs_topo(graph *g, int start_id)
     queue *q = new_queue(0);
 
 
-    // clear found flag on all nodes in graph
+    // clear visited flag on all nodes in graph
     for(int i=0; i<g->node_count; i++)
     {
         g->nodes[i].visited= false;
@@ -267,6 +266,42 @@ void dfs_topo(graph *g, int start_id)
     }
 }
 
+node* end_leaf_node(graph *g)
+{
+    for(int i=0; i<g->node_count;i++)
+    {
+        if(i==g->nodes[i].node_number && !g->nodes[i].visited)
+        {
+            node *n = g->nodes[i];
+        }
+    }
+    return NULL;
+}
+
+node* find_start_node(graph *g)
+{
+
+}
+
+void print_graph(graph *g)
+{
+    for(int i=0; i<g->node_count; i++)
+    {
+        for(edge *e=g->nodes[i].edges;e=e->next)
+        {
+            printf(" %d ---> %d\n", g->nodes[i].node_number, g->nodes[i].edges->dst_node_id);
+        }
+    }
+}
+
+void topological_sort()
+{
+    //Set all nodes to unvisited
+    //for()
+    //find leafnodes
+    //iterate through
+    //
+}
 
 /*
  Former method
@@ -464,6 +499,11 @@ int main(int argc, const char *argv[])
     bfsv2(graph, src_node, dst_node);
     print_distance_prev(graph);
     topologicalSort(graph);
+
+    print_graph(graph);
+    graph* t = graph_transpose(graph);
+    print_graph(t);
+    
 
     return 0;
 }
