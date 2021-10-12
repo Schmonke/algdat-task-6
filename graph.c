@@ -30,6 +30,7 @@ typedef struct node
     char* text;
     int node_number;
     struct edge *edges;
+    unsigned int edge_count;
 
     // BFS
     bool found;
@@ -54,6 +55,36 @@ typedef struct
     int count;
 } queue;
 
+edge *new_edge(int dst_node_id, edge* next)
+{
+    edge* e = malloc(sizeof(edge));
+    e->dst_node_id = dst_node_id;
+    e->next = next;
+    return e;
+}
+
+/**
+ * Adds an edge to the specified node's edges linked list.
+ * If list is NOT empty it iterates throug each element in
+ * list until list head is found. Adds new edge to list head.
+ */
+void edge_add(node *n, int dst_node_id)
+{
+    if(n->edges == NULL)
+    {
+        n->edges = new_edge(dst_node_id, NULL);
+    }
+    else
+    {
+        edge *e = n->edges;
+        while (e->next)
+        {
+            e = e->next;
+        }
+        e->next = new_edge(dst_node_id, NULL);
+    }
+}
+
 queue *new_queue(int capacity)
 {
     if (capacity <= 0)
@@ -65,14 +96,6 @@ queue *new_queue(int capacity)
     q->capacity = capacity;
     q->count = 0;
     return q;
-}
-
-edge *new_edge(int dst_node_id, edge* next)
-{
-    edge* e = malloc(sizeof(edge));
-    e->dst_node_id = dst_node_id;
-    e->next = next;
-    return e;
 }
 
 void queue_push(queue *q, int nodeId)
@@ -188,12 +211,13 @@ void print_distance_prev(graph *g)
         printf(" %d | %d | %d \n", n->node_number, n->prevNodeId, n->dist);
     }
 }
-
+static int count = 1;
 int dfs_rec(graph *g, queue *q, int node_id)
 {
     node *top_node = &g->nodes[node_id];
-    if(!top_node->visited)
+    if (!top_node->visited)
     {
+        printf("%d\n", count++);
         top_node->visited = true;
         for (edge *e=top_node->edges; e; e=e->next)
         {
@@ -201,10 +225,11 @@ int dfs_rec(graph *g, queue *q, int node_id)
             node *inner_node = &g->nodes[next_id];
             if (!inner_node->visited)
             {
+                printf("Calling rec - node: %d\n", next_id);
                 queue_push(q, dfs_rec(g, q, next_id));
             }
         } 
-    }
+    } 
 }
  
 queue *dfs_topo(graph *g)
@@ -216,9 +241,9 @@ queue *dfs_topo(graph *g)
     {
         g->nodes[i].visited= false;
     }
-
     for(int i = 0; i < g->node_count; i++)
     {
+        //printf("%d\n", i);
         dfs_rec(g, q, i);
     }
     return q;
@@ -314,6 +339,7 @@ bool find_next_token(char *data, int length, int *index)
         i++;
     }
     *index = i;
+
     return nextline;
 }
 
@@ -358,9 +384,6 @@ char *mmap_file(const char *filename, int *length)
     char *data = (char*)mmap(NULL, len, PROT_READ, MAP_PRIVATE, fd, 0); //NULL means the kernel picks starting addr
     close(fd);
     
-    printf("mmap: %p %d\n", data, len);
-    perror("NO");
-    
     *length = len;
     return data;
 }
@@ -372,7 +395,6 @@ graph *parse_graphfile(const char *graphfile)
     char *data = mmap_file(graphfile, &length);
     if (data == MAP_FAILED)
     {
-        printf("MONKE");
         return NULL;
     }
 
@@ -386,7 +408,7 @@ graph *parse_graphfile(const char *graphfile)
     g->node_count = node_count;
     g->nodes = calloc(node_count, sizeof(node));
 
-    for (int l = 0; i < length; l++)
+    while (i < length)
     {
         int node_id = atoi(&data[i]);
 
@@ -395,17 +417,15 @@ graph *parse_graphfile(const char *graphfile)
         if (node_id < node_count && edge_dst_id < node_count)
         {
             node *n = &g->nodes[node_id];
-            edge *e = malloc(sizeof(edge));
-            e->next = new_edge(edge_dst_id, n->edges);
+            n->node_number = node_id;
+            edge_add(n, edge_dst_id);
         }
-
+        
         if (find_next_token(data, length, &i)) continue;
         if (node_id < node_count)
         {
             g->nodes[node_id].text = parse_string(data, length, &i);
         }
-
-        find_next_token(data, length, &i);
     }
 
     munmap(data, length);
@@ -494,6 +514,7 @@ int main(int argc, const char *argv[])
     //graph* t = graph_transpose(graph);
     //print_graph(t);
     
-
+    free(graph);
+    free(q);
     return 0;
 }
