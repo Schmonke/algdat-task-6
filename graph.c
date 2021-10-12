@@ -111,23 +111,19 @@ void queue_push(queue *q, int nodeId)
     q->elems[q->count++] = nodeId;
 }
 
-int queue_peek(queue *q, bool *found)
+int queue_peek(queue *q)
 {
     if (q->count == 0)
     {
-        if (found != NULL) *found = false;
         return 0;
     }
-    if (found != NULL) *found = true;
-    return q->elems[q->count];
+    return q->elems[q->count - 1];
 }
 
-int queue_pop(queue *q, bool *found)
+int queue_pop(queue *q)
 {
-    bool f = false;
-    int result = queue_peek(q, &f);
-    if (f) q->count--;
-    if (found != NULL) *found = f;
+    int result = queue_peek(q);
+    q->count--;
     return result;
 }
 
@@ -175,7 +171,7 @@ void bfsv2(graph *g, int srcNodeId, int dstNodeId)
     // look over nodes
     while (!found && q->count != 0)
     {
-        int n_id = (int)queue_pop(q, NULL);
+        int n_id = (int)queue_pop(q);
         node *n = &g->nodes[n_id];
 
         // look over edges and push to queue
@@ -217,7 +213,7 @@ int dfs_rec(graph *g, queue *q, int node_id)
     node *top_node = &g->nodes[node_id];
     if (!top_node->visited)
     {
-        printf("%d\n", count++);
+        //printf("%d\n", count++);
         top_node->visited = true;
         for (edge *e=top_node->edges; e; e=e->next)
         {
@@ -225,16 +221,19 @@ int dfs_rec(graph *g, queue *q, int node_id)
             node *inner_node = &g->nodes[next_id];
             if (!inner_node->visited)
             {
-                printf("Calling rec - node: %d\n", next_id);
-                queue_push(q, dfs_rec(g, q, next_id));
+                //printf("Calling rec - node: %d\n", next_id);
+                dfs_rec(g, q, next_id);
             }
-        } 
-    } 
+        }
+        //printf("%d\n", node_id);
+        queue_push(q, node_id);
+    }
+    return node_id;
 }
  
 queue *dfs_topo(graph *g)
 {
-    queue *q = new_queue(0);
+    queue *q = new_queue(g->node_count - 1);
 
     // clear visited flag on all nodes in graph
     for(int i=0; i<g->node_count; i++)
@@ -248,75 +247,6 @@ queue *dfs_topo(graph *g)
     }
     return q;
 }
-
-// node* start_node = &g->nodes[i];
-        // if (start_node->found) continue;
-
-        // start_node->found = true;
-        // for (edge *e=start_node->edges; e; e=e->next)
-        // {
-        //     int next_id = e->dst_node_id;
-        //     node* n = &g->nodes[next_id];
-        //     if (!n->visited)
-        //     {
-                
-        //     }
-        // }
-
-// node* end_leaf_node(graph *g)
-// {
-//     for(int i=0; i<g->node_count;i++)
-//     {
-//         if(i==g->nodes[i].node_number && !g->nodes[i].visited)
-//         {
-//             node *n = g->nodes[i];
-//         }
-//     }
-//     return NULL;
-// }
-
-// node* find_start_node(graph *g)
-// {
-
-// }
-
-// void print_graph(graph *g)
-// {
-//     for(int i=0; i<g->node_count; i++)
-//     {
-//         for(edge *e=g->nodes[i].edges;e=e->next)
-//         {
-//             printf(" %d ---> %d\n", g->nodes[i].node_number, g->nodes[i].edges->dst_node_id);
-//         }
-//     }
-// }
-
-// void topological_sort()
-// {
-//     //Set all nodes to unvisited
-//     //for()
-//     //find leafnodes
-//     //iterate through
-//     //
-// }
-
-/*
- Former method
- 
-node* topologicalSort(graph *g)
-{
-    node *end = 0;
-    for(int i = g->node_count - 1; i--;)
-    {
-       g->nodes[i] = (node *)calloc(1, sizeof(q)); // void* cannot be assigned to entity of type 
-    }
-    for(int i = g->node_count - 1; i--;)
-    {
-       end = df_topo(&g->node_count[&i], end); //  expression must have pointer-to-object type but has type int
-    }
-    return end;
-}
-*/
 
 
 /**
@@ -408,6 +338,11 @@ graph *parse_graphfile(const char *graphfile)
     g->node_count = node_count;
     g->nodes = calloc(node_count, sizeof(node));
 
+    for (int i = 0; i < node_count; i++)
+    {
+        g->nodes[i].node_number = i;
+    }
+    
     while (i < length)
     {
         int node_id = atoi(&data[i]);
@@ -480,7 +415,7 @@ void print_queue(queue *q)
     bool t = true;
     while (q->count > 0)
     {
-        printf("%d ", queue_pop(q, &t));
+        printf("%d ", queue_pop(q));
     }
     printf("\n");
 
