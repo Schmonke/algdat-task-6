@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include <stdbool.h>
 #include <string.h>
+#include <sys/mman.h>
 
 
 /* Edge represents connection between two nodes
@@ -101,9 +102,10 @@ int queue_peek(queue *q, bool *found)
 int queue_pop(queue *q, bool *found)
 {
     bool f = false;
-    queue_peek(q, &f);
+    int result = queue_peek(q, &f);
     if (f) q->count--;
     if (found != NULL) *found = f;
+    return result;
 }
 
 void queue_free(queue *q)
@@ -179,50 +181,35 @@ void bfsv2(graph *g, int srcNodeId, int dstNodeId)
 
 void print_distance_prev(graph *g)
 {
-    printf(" Node  Prev  Dist");
+    printf("Node  Prev  Dist\n");
     for(int i=0; i < g->node_count; i++)
     {
         node *n = &g->nodes[i];
-        printf("%d | %d | %d \n",n->node_number, n->prevNodeId, n->dist);
+        printf(" %d | %d | %d \n", n->node_number, n->prevNodeId, n->dist);
     }
 }
-//NEXT time: finn endenode, kjør dybde først søk så print it
-graph* graph_transpose(graph *g)
+
+int dfs_rec(graph *g, queue *q, int node_id)
 {
-    const int node_count = g->node_count;
-    graph *t = (graph *)calloc(node_count, sizeof(node));
-    t->node_count = node_count;
-
-    for (int i = 0; i < node_count; i++)
+    node *top_node = &g->nodes[node_id];
+    if(!top_node->visited)
     {
-        t->nodes[i] = g->nodes[i];
-    }
-    
-    // loop over all the nodes
-    // get the edges for that node, and reverse the direction:
-    //      index is source and dst_node_id is destination
-    // thereafter we set the edge into the dest node
-    
-    edge *e = g->nodes[0].edges;
-    for (int i = 0; i < node_count; i++)
-    {   
-        for(edge *e; e; e=e->next)
+        top_node->visited = true;
+        for (edge *e=top_node->edges; e; e=e->next)
         {
-        int dst_id = &g->nodes[i]->edges->dst_node_id;
-        edge *next_edge = e->next; //maybe is right?
-        t.nodes[dst_id]->edges = new_edge(dst_id, next_edge);
-        }
+            int next_id = e->dst_node_id;
+            node *inner_node = &g->nodes[next_id];
+            if (!inner_node->visited)
+            {
+                queue_push(q, dfs_rec(g, q, next_id));
+            }
+        } 
     }
-    return t;
 }
-
-
-
- //DFS help method for topological sort 
-void dfs_topo(graph *g, int start_id)
+ 
+queue *dfs_topo(graph *g)
 {
     queue *q = new_queue(0);
-
 
     // clear visited flag on all nodes in graph
     for(int i=0; i<g->node_count; i++)
@@ -230,78 +217,63 @@ void dfs_topo(graph *g, int start_id)
         g->nodes[i].visited= false;
     }
 
-    node* next_node = &g->nodes[start_id];
-    queue_push(q, start_id);
-    bool found = false;
-    
-    while (!found)
+    for(int i = 0; i < g->node_count; i++)
     {
-        int node_id = queue_peek(q, NULL); //get last node_id in the queue
-        node *next = &g->nodes[node_id];
-        next->visited = true;
-        bool is_leaf = next->edges == NULL;
-
-        bool found_unvisited = false;
-        // Find an unvisited node and enqueue it
-        for (edge *e=next_node->edges; e; e=e->next)
-        {
-            int next_id = e->dst_node_id;
-            node* n = &g->nodes[next_id];
-            if (!n->visited)
-            {
-                //Visits next unvisited node
-                queue_push(q, e->dst_node_id);
-                found_unvisited = true;
-            }
-        }
-        if (!found_unvisited)
-        {
-            queue_pop(q, NULL);
-        }
-        
-        
-        // Is leaf node? Add to list and go back up.
-        // Has edges that point to unvisited nodes? Continue down until an
-        // unvisited node is found.
+        dfs_rec(g, q, i);
     }
+    return q;
 }
 
-node* end_leaf_node(graph *g)
-{
-    for(int i=0; i<g->node_count;i++)
-    {
-        if(i==g->nodes[i].node_number && !g->nodes[i].visited)
-        {
-            node *n = g->nodes[i];
-        }
-    }
-    return NULL;
-}
+// node* start_node = &g->nodes[i];
+        // if (start_node->found) continue;
 
-node* find_start_node(graph *g)
-{
+        // start_node->found = true;
+        // for (edge *e=start_node->edges; e; e=e->next)
+        // {
+        //     int next_id = e->dst_node_id;
+        //     node* n = &g->nodes[next_id];
+        //     if (!n->visited)
+        //     {
+                
+        //     }
+        // }
 
-}
+// node* end_leaf_node(graph *g)
+// {
+//     for(int i=0; i<g->node_count;i++)
+//     {
+//         if(i==g->nodes[i].node_number && !g->nodes[i].visited)
+//         {
+//             node *n = g->nodes[i];
+//         }
+//     }
+//     return NULL;
+// }
 
-void print_graph(graph *g)
-{
-    for(int i=0; i<g->node_count; i++)
-    {
-        for(edge *e=g->nodes[i].edges;e=e->next)
-        {
-            printf(" %d ---> %d\n", g->nodes[i].node_number, g->nodes[i].edges->dst_node_id);
-        }
-    }
-}
+// node* find_start_node(graph *g)
+// {
 
-void topological_sort()
-{
-    //Set all nodes to unvisited
-    //for()
-    //find leafnodes
-    //iterate through
-    //
-}
+// }
+
+// void print_graph(graph *g)
+// {
+//     for(int i=0; i<g->node_count; i++)
+//     {
+//         for(edge *e=g->nodes[i].edges;e=e->next)
+//         {
+//             printf(" %d ---> %d\n", g->nodes[i].node_number, g->nodes[i].edges->dst_node_id);
+//         }
+//     }
+// }
+
+// void topological_sort()
+// {
+//     //Set all nodes to unvisited
+//     //for()
+//     //find leafnodes
+//     //iterate through
+//     //
+// }
 
 /*
  Former method
@@ -386,7 +358,7 @@ char *mmap_file(const char *filename, int *length)
     char *data = (char*)mmap(NULL, len, PROT_READ, MAP_PRIVATE, fd, 0); //NULL means the kernel picks starting addr
     close(fd);
     
-    printf("mmap: %p %d", data, len);
+    printf("mmap: %p %d\n", data, len);
     perror("NO");
     
     *length = len;
@@ -400,6 +372,7 @@ graph *parse_graphfile(const char *graphfile)
     char *data = mmap_file(graphfile, &length);
     if (data == MAP_FAILED)
     {
+        printf("MONKE");
         return NULL;
     }
 
@@ -436,6 +409,7 @@ graph *parse_graphfile(const char *graphfile)
     }
 
     munmap(data, length);
+    return g;
 }
 
 void parse_namefile(graph *g, const char *graphfile)
@@ -480,6 +454,18 @@ graph* parse_graph(const char *graphfile, const char *namefile)
     return g;
 }
 
+void print_queue(queue *q)
+{
+    printf("Topological order: ");
+    bool t = true;
+    while (q->count > 0)
+    {
+        printf("%d ", queue_pop(q, &t));
+    }
+    printf("\n");
+
+}
+
 int main(int argc, const char *argv[])
 {
     const int src_node = argc > 1 ? atoi(argv[1]) : -1;
@@ -496,13 +482,17 @@ int main(int argc, const char *argv[])
         return 1;
     }
     graph* graph = parse_graph(graphfile, namefile);
+    queue *q = dfs_topo(graph);
+    print_queue(q);
     bfsv2(graph, src_node, dst_node);
     print_distance_prev(graph);
-    topologicalSort(graph);
 
-    print_graph(graph);
-    graph* t = graph_transpose(graph);
-    print_graph(t);
+    //print_graph(graph);
+
+
+
+    //graph* t = graph_transpose(graph);
+    //print_graph(t);
     
 
     return 0;
