@@ -62,6 +62,13 @@ typedef struct queue
     int count;
 } queue;
 
+typedef struct stack
+{
+    int *elems;
+    size_t capacity;
+    int count;
+} stack;
+
 edge *new_edge(int dst_node_id, edge* next)
 {
     edge* e = malloc(sizeof(edge));
@@ -100,12 +107,27 @@ queue *new_queue()
     return q;
 }
 
+stack *new_stack(int capacity)
+{
+    stack *s = malloc(sizeof(stack));
+    s->capacity = capacity;
+    s->count = 0;
+    s->elems = malloc(sizeof(int) * capacity);
+    return s;
+}
+
 queueNode *new_queueNode(int data, queueNode *next)
 {
     queueNode *qn = calloc(1, sizeof(queueNode));
     qn->data = data;
     qn->next = next;
     return qn;
+}
+
+void stack_push(stack *s, int elem)
+{
+    s->elems[s->count] = elem;
+    s->count++;
 }
 
 void queue_push(queue *q, int node_id)
@@ -128,6 +150,15 @@ void queue_push(queue *q, int node_id)
     q->count++;
 }
 
+int stack_peek(stack *s)
+{
+    if (s->count == 0)
+    {
+        return 0;
+    }
+    return s->elems[s->count - 1];
+}
+
 /**
  * Returns the first value in the queue without changing the queue.
  * 
@@ -141,6 +172,13 @@ int queue_peek(queue *q)
     return q->head->data;
 }
 
+int stack_pop(stack *s)
+{
+    int result = stack_peek(s);
+    s->count--;
+    return result;
+}
+
 /**
  * Removes and returns first value in the queue.
  * Shifts the head to point to next queueNode.  
@@ -151,9 +189,15 @@ int queue_pop(queue *q)
     queueNode *old_node = q->head;
     q->head = q->head->next;
     q->count--;
-    free(old_node); //free the node that got poped. 
+    free(old_node); //free the node that got popped. 
     //printf("%d", result);
     return result;
+}
+
+void stack_free(stack *s)
+{
+    //free(s->elems);
+    free(s);
 }
 
 void queue_free(queue *q)
@@ -169,13 +213,12 @@ void queue_free(queue *q)
     free(q);
 }
 
-void print_queue(queue *q)
+void print_stack(stack *s)
 {
     printf("Topological order: ");
-    bool t = true;
-    while (q->count > 0)
+    while (s->count > 0)
     {
-        printf("%d ", queue_pop(q));
+        printf("%d ", stack_pop(s));
     }
     printf("\n");
 }
@@ -265,6 +308,7 @@ void bfsv2(graph *g, int srcNodeId)
             //printf(":%d -> %d\n", target->prevNodeId, targetNodeId);
         }
     }
+    //queue_free(q);
 }
 
 void print_distance_prev(graph *g)
@@ -277,7 +321,7 @@ void print_distance_prev(graph *g)
     }
 }
 static int count = 1;
-void dfs_rec(graph *g, queue *q, int node_id)
+void dfs_rec(graph *g, stack *s, int node_id)
 {
     node *top_node = &g->nodes[node_id];
     if (!top_node->visited)
@@ -286,33 +330,32 @@ void dfs_rec(graph *g, queue *q, int node_id)
         top_node->visited = true;
         for (edge *e=top_node->edges; e; e=e->next)
         {
-            int next_id = e->dst_node_id;
+            int next_id = e->dst_node_id; //3
             node *inner_node = &g->nodes[next_id];
             if (!inner_node->visited)
             {
                 //printf("Calling rec - node: %d\n", next_id);
-                dfs_rec(g, q, next_id);
+                dfs_rec(g, s, next_id);
             }
         }
         //printf("%d\n", node_id);
-        queue_push(q, node_id);
+        stack_push(s, node_id);
     }
 }
  
-queue *dfs_topo(graph *g)
+stack *dfs_topo(graph *g)
 {
-    queue *q = new_queue();
+    stack *s = new_stack(g->node_count);
 
     reset_graph_flags(g);
 
     for(int i = 0; i < g->node_count; i++)
     {
         //printf("%d\n", i);
-        dfs_rec(g, q, i);
+        dfs_rec(g, s, i);
     }
-    return q;
+    return s;
 }
-
 
 /**
  * Parsing and stuff
@@ -489,8 +532,8 @@ int main(int argc, const char *argv[])
         return 1;
     }
     graph* graph = parse_graph(graphfile, namefile);
-    queue *q = dfs_topo(graph);
-    print_queue(q);
+    stack *s = dfs_topo(graph);
+    print_stack(s);
     bfsv2(graph, src_node);
     print_distance_prev(graph);
 
@@ -502,6 +545,6 @@ int main(int argc, const char *argv[])
     //print_graph(t);
     
     free(graph);
-    free(q);
+    stack_free(s);
     return 0;
 }
