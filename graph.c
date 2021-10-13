@@ -44,12 +44,21 @@ typedef struct graph
     int node_count;
 } graph;
 
-
+/**
+ * Implement queue as linkedlist
+ * 
+ */
 const int QUEUE_DEFAULT_CAPACITY = 16;
-typedef struct 
+
+typedef struct queueNode
 {
-    int *elems;
-    int capacity;
+    int data;
+    struct queueNode * next;
+} queueNode;
+
+typedef struct queue
+{
+    struct queueNode *head;
     int count;
 } queue;
 
@@ -83,52 +92,80 @@ void edge_add(node *n, int dst_node_id)
     }
 }
 
-queue *new_queue(int capacity)
+queue *new_queue()
 {
-    if (capacity <= 0)
-    {
-        capacity = QUEUE_DEFAULT_CAPACITY;
-    }
     queue *q = calloc(1, sizeof(queue));
-    q->elems = calloc(capacity, sizeof(int));
-    q->capacity = capacity;
+    q->head = NULL;
     q->count = 0;
     return q;
 }
 
-void queue_push(queue *q, int nodeId)
+queueNode *new_queueNode(int data, queueNode *next)
 {
-    if (q->count + 1 > q->capacity)
-    {
-        q->capacity *= 2;
-        int *old = q->elems;
-        q->elems = calloc(q->capacity, sizeof(int));
-        memcpy(q->elems, old, q->count * sizeof(int));
-        free(old);
-    }
-    q->elems[q->count++] = nodeId;
+    queueNode *qn = calloc(1, sizeof(queueNode));
+    qn->data = data;
+    qn->next = next;
+    return qn;
 }
 
+void queue_push(queue *q, int node_id)
+{
+    queueNode *qn = new_queueNode(node_id, NULL);
+
+    if(q->head)
+    {
+        queueNode *head = q->head;
+        while (head->next)
+        {
+            head = head->next;
+        } 
+        head->next = qn;
+    }
+    else
+    {
+        q->head = qn;
+    }
+    q->count++;
+}
+
+/**
+ * Returns the first value in the queue without changing the queue.
+ * 
+ */
 int queue_peek(queue *q)
 {
     if (q->count == 0)
     {
         return 0;
     }
-    return q->elems[q->count - 1];
+    return q->head->data;
 }
 
+/**
+ * Removes and returns first value in the queue.
+ * Shifts the head to point to next queueNode.  
+ */
 int queue_pop(queue *q)
 {
     int result = queue_peek(q);
+    queueNode *old_node = q->head;
+    q->head = q->head->next;
     q->count--;
+    free(old_node); //free the node that got poped. 
     //printf("%d", result);
     return result;
 }
 
 void queue_free(queue *q)
 {
-    free(q->elems);
+    queueNode *head = q->head;
+    while (head->next)
+        {
+            queueNode *old_node = head;
+            head = head->next;
+            free(old_node);
+        }
+    free(q->head);
     free(q);
 }
 
@@ -192,7 +229,7 @@ void bfsv2(graph *g, int srcNodeId)
 {
     reset_graph_flags(g);
     
-    queue *q = new_queue(g->node_count - 1);
+    queue *q = new_queue();
     
     // push initial node onto queue for searching
     node *src = &g->nodes[srcNodeId];
@@ -264,7 +301,7 @@ void dfs_rec(graph *g, queue *q, int node_id)
  
 queue *dfs_topo(graph *g)
 {
-    queue *q = new_queue(g->node_count - 1);
+    queue *q = new_queue();
 
     reset_graph_flags(g);
 
