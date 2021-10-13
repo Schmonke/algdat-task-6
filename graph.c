@@ -37,7 +37,6 @@ typedef struct node
     int dist;
 } node;
 
-// Graph 
 typedef struct graph
 {
     node *nodes; 
@@ -45,21 +44,17 @@ typedef struct graph
 } graph;
 
 /**
- * Implement queue as linkedlist
- * 
+ * Implements queue as linkedlist of queue_nodes
  */
-const int QUEUE_DEFAULT_CAPACITY = 16;
-
-typedef struct queueNode
+typedef struct queue_node
 {
     int data;
-    struct queueNode * next;
-} queueNode;
+    struct queue_node * next;
+} queue_node;
 
 typedef struct queue
 {
-    struct queueNode *head;
-    int count;
+    struct queue_node *head;
 } queue;
 
 typedef struct stack
@@ -77,34 +72,141 @@ edge *new_edge(int dst_node_id, edge* next)
     return e;
 }
 
+void graph_reset_flags(graph *g)
+{
+    for(int i = 0; i < g->node_count; i++)
+    {
+        g->nodes[i].visited = false;
+        g->nodes[i].prevNodeId = -1;
+        g->nodes[i].dist = 0;
+    }
+}
+
+void graph_free(graph *g)
+{
+    for (int i = 0; i < g->node_count; i++)
+    {
+        edge *e = g->nodes[i].edges;
+        while (e)
+        {
+            edge *next = e->next;
+            free(e);
+            e = next;
+        }
+    }
+    free(g->nodes);
+    free(g);
+}
+
 /**
- * Adds an edge to the specified node's edges linked list.
- * If list is NOT empty it iterates throug each element in
- * list until list head is found. Adds new edge to list head.
+ * Adds an edge to the front of the linked list.
+ * Adds to front insteda of back because its more 
+ * efficient and the list order is irelevant. 
  */
 void edge_add(node *n, int dst_node_id)
 {
-    if(n->edges == NULL)
-    {
-        n->edges = new_edge(dst_node_id, NULL);
-    }
-    else
-    {
-        edge *e = n->edges;
-        while (e->next)
-        {
-            e = e->next;
-        }
-        e->next = new_edge(dst_node_id, NULL);
-    }
+    n->edges = new_edge(dst_node_id, n->edges);
 }
 
 queue *new_queue()
 {
     queue *q = calloc(1, sizeof(queue));
     q->head = NULL;
-    q->count = 0;
     return q;
+}
+
+queue_node *new_queue_node(int data, queue_node *next)
+{
+    queue_node *qn = calloc(1, sizeof(queue_node));
+    qn->data = data;
+    qn->next = next;
+    return qn;
+}
+
+void queue_push(queue *q, int node_id)
+{
+    queue_node *qn = new_queue_node(node_id, NULL);
+
+    if(q->head)
+    {
+        queue_node *head = q->head;
+        while (head->next)
+        {
+            head = head->next;
+        } 
+        head->next = qn;
+    }
+    else
+    {
+        q->head = qn;
+    }
+}
+
+/**
+ * Returns the first value in the queue without changing the queue.
+ * 
+ */
+// int queue_peek(queue *q)
+// {
+//     if (q->count == 0)
+//     {
+//         return 0;
+//     }
+//     return q->head->data;
+// }
+
+int queue_peek(queue *q, bool *found)
+{
+    if (q->head == NULL)
+    {
+        if (found != NULL) *found = false;
+        return -1;
+    }
+    if (found != NULL) *found = true;
+    return q->head->data;
+}
+
+/**
+ * Removes and returns first value in the queue.
+ * Shifts the head to point to next queue_node.  
+ */
+// int queue_pop(queue *q)
+// {
+//     if (q->count == 0) return 0;
+
+//     int result = queue_peek(q);
+//     queue_node *old_node = q->head;
+//     q->head = q->head->next;
+//     q->count--;
+//     free(old_node); //free the node that got popped. 
+//     //printf("%d", result);
+//     return result;
+// }
+
+int queue_pop(queue *q, bool *found)
+{
+    bool f = false;
+    int result = queue_peek(q, &f);
+    if(result > -1) 
+    {
+        queue_node *old_node = q->head;
+        q->head = q->head->next;
+        free(old_node);
+        if (found != NULL) *found = f;
+    }
+    return result;
+}
+
+void queue_free(queue *q)
+{
+    queue_node *head = q->head;
+    while (head)
+        {
+            queue_node *old_node = head;
+            head = head->next;
+            free(old_node);
+        }
+    free(q);
 }
 
 stack *new_stack(int capacity)
@@ -116,38 +218,10 @@ stack *new_stack(int capacity)
     return s;
 }
 
-queueNode *new_queueNode(int data, queueNode *next)
-{
-    queueNode *qn = calloc(1, sizeof(queueNode));
-    qn->data = data;
-    qn->next = next;
-    return qn;
-}
-
 void stack_push(stack *s, int elem)
 {
     s->elems[s->count] = elem;
     s->count++;
-}
-
-void queue_push(queue *q, int node_id)
-{
-    queueNode *qn = new_queueNode(node_id, NULL);
-
-    if(q->head)
-    {
-        queueNode *head = q->head;
-        while (head->next)
-        {
-            head = head->next;
-        } 
-        head->next = qn;
-    }
-    else
-    {
-        q->head = qn;
-    }
-    q->count++;
 }
 
 int stack_peek(stack *s)
@@ -159,19 +233,6 @@ int stack_peek(stack *s)
     return s->elems[s->count - 1];
 }
 
-/**
- * Returns the first value in the queue without changing the queue.
- * 
- */
-int queue_peek(queue *q)
-{
-    if (q->count == 0)
-    {
-        return 0;
-    }
-    return q->head->data;
-}
-
 int stack_pop(stack *s)
 {
     int result = stack_peek(s);
@@ -179,38 +240,10 @@ int stack_pop(stack *s)
     return result;
 }
 
-/**
- * Removes and returns first value in the queue.
- * Shifts the head to point to next queueNode.  
- */
-int queue_pop(queue *q)
-{
-    int result = queue_peek(q);
-    queueNode *old_node = q->head;
-    q->head = q->head->next;
-    q->count--;
-    free(old_node); //free the node that got popped. 
-    //printf("%d", result);
-    return result;
-}
-
 void stack_free(stack *s)
 {
-    //free(s->elems);
+    free(s->elems);
     free(s);
-}
-
-void queue_free(queue *q)
-{
-    queueNode *head = q->head;
-    while (head->next)
-        {
-            queueNode *old_node = head;
-            head = head->next;
-            free(old_node);
-        }
-    free(q->head);
-    free(q);
 }
 
 void print_stack(stack *s)
@@ -222,7 +255,6 @@ void print_stack(stack *s)
     }
     printf("\n");
 }
-
 
 //Datastructure for search
 #define infinity 1000000000
@@ -240,19 +272,10 @@ int count_edges(node* n)
 }
 
 //Do we need this method????
-void set_text_value(node *n, void* text)
+void set_text_value(node *n, void *text)
 {
     n->text=(char*) text;
 }
-
-void reset_graph_flags(graph * g)
-{
-    for(int i=0; i<g->node_count; i++)
-    {
-        g->nodes[i].visited= false;
-    }  
-}
-
 
 /**
  * What to do: 
@@ -270,7 +293,7 @@ void reset_graph_flags(graph * g)
  */
 void bfsv2(graph *g, int srcNodeId)
 {
-    reset_graph_flags(g);
+    graph_reset_flags(g);
     
     queue *q = new_queue();
     
@@ -280,12 +303,15 @@ void bfsv2(graph *g, int srcNodeId)
     src->prevNodeId = -1;
 
     queue_push(q, srcNodeId);
+
+    bool found = true;
     
     // look over nodes
-    while (q->count != 0)
+    while (found)
     {
-        bool t = true;
-        int n_id = (int)queue_pop(q);
+        int n_id = (int)queue_pop(q, &found);
+        if(n_id == -1) break;
+        //printf(":%d\n",n_id);
         node *n = &g->nodes[n_id];
         n->visited = true;
 
@@ -295,6 +321,7 @@ void bfsv2(graph *g, int srcNodeId)
         while (e != NULL) //Stops when all edges of a node are visited.
         {
             int targetNodeId = e->dst_node_id;
+            //printf(":::%d\n",targetNodeId);
             node *target = &g->nodes[targetNodeId];
             e = e->next;
             
@@ -308,7 +335,7 @@ void bfsv2(graph *g, int srcNodeId)
             //printf(":%d -> %d\n", target->prevNodeId, targetNodeId);
         }
     }
-    //queue_free(q);
+    queue_free(q);
 }
 
 void print_distance_prev(graph *g)
@@ -320,7 +347,7 @@ void print_distance_prev(graph *g)
         printf("%5d | %5d | %5d\n", n->node_number, n->prevNodeId, n->dist);
     }
 }
-static int count = 1;
+
 void dfs_rec(graph *g, stack *s, int node_id)
 {
     node *top_node = &g->nodes[node_id];
@@ -347,7 +374,7 @@ stack *dfs_topo(graph *g)
 {
     stack *s = new_stack(g->node_count);
 
-    reset_graph_flags(g);
+    graph_reset_flags(g);
 
     for(int i = 0; i < g->node_count; i++)
     {
@@ -532,19 +559,12 @@ int main(int argc, const char *argv[])
         return 1;
     }
     graph* graph = parse_graph(graphfile, namefile);
-    stack *s = dfs_topo(graph);
-    print_stack(s);
     bfsv2(graph, src_node);
     print_distance_prev(graph);
-
-    //print_graph(graph);
-
-
-
-    //graph* t = graph_transpose(graph);
-    //print_graph(t);
+    stack *s = dfs_topo(graph);
+    print_stack(s);
     
-    free(graph);
+    graph_free(graph);
     stack_free(s);
     return 0;
 }
