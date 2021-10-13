@@ -348,40 +348,95 @@ void print_distance_prev(graph *g)
     }
 }
 
-void dfs_rec(graph *g, stack *s, int node_id)
+// void dfs_rec(graph *g, stack *s, int node_id)
+// {
+//     node *top_node = &g->nodes[node_id];
+//     if (!top_node->visited)
+//     {
+//         //printf("%d\n", count++);
+//         top_node->visited = true;
+//         for (edge *e=top_node->edges; e; e=e->next)
+//         {
+//             int next_id = e->dst_node_id; //3
+//             node *inner_node = &g->nodes[next_id];
+//             if (!inner_node->visited)
+//             {
+//                 //printf("Calling rec - node: %d\n", next_id);
+//                 dfs_rec(g, s, next_id);
+//             }
+//         }
+//         //printf("%d\n", node_id);
+//         stack_push(s, node_id);
+//     }
+// }
+
+
+int some_func(graph *g, stack *res_s, stack *temp_s, int node_id)
 {
+    //printf("::%d\n", temp_s->count);
     node *top_node = &g->nodes[node_id];
+    // for (edge *e=top_node->edges; e; e=e->next)
+    // {
+    //     printf("%d\n", e->dst_node_id);
+    // }
     if (!top_node->visited)
     {
-        //printf("%d\n", count++);
         top_node->visited = true;
         for (edge *e=top_node->edges; e; e=e->next)
         {
-            int next_id = e->dst_node_id; //3
+            //printf("%d\n", e->dst_node_id);
+            int next_id = e->dst_node_id;
+            node_id = next_id;
+            //printf("::%d\n", next_id);
             node *inner_node = &g->nodes[next_id];
             if (!inner_node->visited)
             {
-                //printf("Calling rec - node: %d\n", next_id);
-                dfs_rec(g, s, next_id);
+                //printf("Calling temp_s PUSH - node: %d\n", next_id);
+                stack_push(temp_s, next_id);
+                
+                //node_id = stack_peek(temp_s);
+                break;
             }
+            
+            //printf("::G\n");
         }
-        //printf("%d\n", node_id);
-        stack_push(s, node_id);
+        
     }
+    printf(":%d\n", temp_s->count);
+    for (edge *e=top_node->edges; e; e=e->next)
+    {
+        if(e->next == NULL)
+        {
+            //printf(":::%d\n", node_id);
+            node *node = &g->nodes[stack_pop(temp_s)];
+            node_id = node->node_number;
+            //printf("::2:%d\n", node_id);
+            stack_push(res_s, node->node_number);
+        }
+    }
+    return node_id;
 }
  
-stack *dfs_topo(graph *g)
+stack *dfs_topo(graph *g, int node_id)
 {
-    stack *s = new_stack(g->node_count);
-
     graph_reset_flags(g);
+
+    stack *temp_s = new_stack(g->node_count);
+    stack *res_s = new_stack(g->node_count);
 
     for(int i = 0; i < g->node_count; i++)
     {
-        //printf("%d\n", i);
-        dfs_rec(g, s, i);
+        //printf(":%d\n", node_id);
+        int id = i;
+        do
+        {
+            id = some_func(g, res_s, temp_s, id);
+            
+        } while (temp_s->count > 0);
+        
     }
-    return s;
+    stack_free(temp_s);
+    return res_s;
 }
 
 /**
@@ -559,12 +614,15 @@ int main(int argc, const char *argv[])
         return 1;
     }
     graph* graph = parse_graph(graphfile, namefile);
+    
+    stack *s = dfs_topo(graph, src_node);
+    print_stack(s);
+    stack_free(s);
+
     bfsv2(graph, src_node);
     print_distance_prev(graph);
-    stack *s = dfs_topo(graph);
-    print_stack(s);
-    
+
     graph_free(graph);
-    stack_free(s);
+    
     return 0;
 }
