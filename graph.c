@@ -238,8 +238,6 @@ void bfsv2(graph *g, int srcNodeId)
 
     queue_push(q, srcNodeId);
     
-    bool found = false;
-
     // look over nodes
     while (q->count != 0)
     {
@@ -250,6 +248,7 @@ void bfsv2(graph *g, int srcNodeId)
 
         // look over edges and push to queue
         edge *e = n->edges;
+        //printf(":::%d\n", e->dst_node_id);
         while (e != NULL) //Stops when all edges of a node are visited.
         {
             int targetNodeId = e->dst_node_id;
@@ -262,6 +261,7 @@ void bfsv2(graph *g, int srcNodeId)
             target->prevNodeId = n_id;
             target->dist = n->dist + 1;
             queue_push(q, targetNodeId);
+            target->visited = true;
             //printf(":%d -> %d\n", target->prevNodeId, targetNodeId);
         }
     }
