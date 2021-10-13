@@ -30,10 +30,8 @@ typedef struct node
     char* text;
     int node_number;
     struct edge *edges;
-    unsigned int edge_count;
 
     // BFS
-    bool found;
     bool visited;
     int prevNodeId;
     int dist;
@@ -124,6 +122,7 @@ int queue_pop(queue *q)
 {
     int result = queue_peek(q);
     q->count--;
+    //printf("%d", result);
     return result;
 }
 
@@ -131,6 +130,17 @@ void queue_free(queue *q)
 {
     free(q->elems);
     free(q);
+}
+
+void print_queue(queue *q)
+{
+    printf("Topological order: ");
+    bool t = true;
+    while (q->count > 0)
+    {
+        printf("%d ", queue_pop(q));
+    }
+    printf("\n");
 }
 
 
@@ -155,8 +165,33 @@ void set_text_value(node *n, void* text)
     n->text=(char*) text;
 }
 
-void bfsv2(graph *g, int srcNodeId, int dstNodeId)
+void reset_graph_flags(graph * g)
 {
+    for(int i=0; i<g->node_count; i++)
+    {
+        g->nodes[i].visited= false;
+    }  
+}
+
+
+/**
+ * What to do: 
+ *  Reset graphs flags.
+ *  Start in sorcenode, loop throug this node's edges and
+ * flag each in turn.
+ *  After all edges are flagged, go to the node connected 
+ * to first the edge. 
+ *  Stop when each node in a layer have edges only pointing
+ * to already visited nodes. 
+ * 
+ * Use queue as holder of nodes to use. 
+ * It represents the order the nodes are visited. 
+ * 
+ */
+void bfsv2(graph *g, int srcNodeId)
+{
+    reset_graph_flags(g);
+    
     queue *q = new_queue(g->node_count - 1);
     
     // push initial node onto queue for searching
@@ -169,14 +204,16 @@ void bfsv2(graph *g, int srcNodeId, int dstNodeId)
     bool found = false;
 
     // look over nodes
-    while (!found && q->count != 0)
+    while (q->count != 0)
     {
+        bool t = true;
         int n_id = (int)queue_pop(q);
         node *n = &g->nodes[n_id];
+        n->visited = true;
 
         // look over edges and push to queue
         edge *e = n->edges;
-        while (!found && e != NULL)
+        while (e != NULL) //Stops when all edges of a node are visited.
         {
             int targetNodeId = e->dst_node_id;
             node *target = &g->nodes[targetNodeId];
@@ -184,31 +221,26 @@ void bfsv2(graph *g, int srcNodeId, int dstNodeId)
             
             // push for deeper search if not already visited
             if (target->visited) continue;
+
             target->prevNodeId = n_id;
             target->dist = n->dist + 1;
             queue_push(q, targetNodeId);
-
-            // target node found? (⌐■_■)
-            if (targetNodeId == dstNodeId)
-            {
-                found = true;
-                break;
-            }
+            //printf(":%d -> %d\n", target->prevNodeId, targetNodeId);
         }
     }
 }
 
 void print_distance_prev(graph *g)
 {
-    printf("Node  Prev  Dist\n");
+    printf("%-5s | %-5s | %-5s\n", "Node", "Prev", "Dist");
     for(int i=0; i < g->node_count; i++)
     {
         node *n = &g->nodes[i];
-        printf(" %d | %d | %d \n", n->node_number, n->prevNodeId, n->dist);
+        printf("%5d | %5d | %5d\n", n->node_number, n->prevNodeId, n->dist);
     }
 }
 static int count = 1;
-int dfs_rec(graph *g, queue *q, int node_id)
+void dfs_rec(graph *g, queue *q, int node_id)
 {
     node *top_node = &g->nodes[node_id];
     if (!top_node->visited)
@@ -228,18 +260,14 @@ int dfs_rec(graph *g, queue *q, int node_id)
         //printf("%d\n", node_id);
         queue_push(q, node_id);
     }
-    return node_id;
 }
  
 queue *dfs_topo(graph *g)
 {
     queue *q = new_queue(g->node_count - 1);
 
-    // clear visited flag on all nodes in graph
-    for(int i=0; i<g->node_count; i++)
-    {
-        g->nodes[i].visited= false;
-    }
+    reset_graph_flags(g);
+
     for(int i = 0; i < g->node_count; i++)
     {
         //printf("%d\n", i);
@@ -409,26 +437,13 @@ graph* parse_graph(const char *graphfile, const char *namefile)
     return g;
 }
 
-void print_queue(queue *q)
-{
-    printf("Topological order: ");
-    bool t = true;
-    while (q->count > 0)
-    {
-        printf("%d ", queue_pop(q));
-    }
-    printf("\n");
-
-}
-
 int main(int argc, const char *argv[])
 {
     const int src_node = argc > 1 ? atoi(argv[1]) : -1;
-    const int dst_node = argc > 2 ? atoi(argv[2]) : -1;
-    const char *graphfile = argc > 3 ? argv[3] : NULL;
-    const char *namefile = argc > 4 ? argv[4] : NULL;
+    const char *graphfile = argc > 2 ? argv[2] : NULL;
+    const char *namefile = argc > 3 ? argv[3] : NULL;
 
-    if (src_node == -1 || dst_node == -1 || graphfile == NULL)
+    if (src_node == -1 || graphfile == NULL)
     {
         printf(
             "You must provide a graph file and optionally a name file.\n"
@@ -439,7 +454,7 @@ int main(int argc, const char *argv[])
     graph* graph = parse_graph(graphfile, namefile);
     queue *q = dfs_topo(graph);
     print_queue(q);
-    bfsv2(graph, src_node, dst_node);
+    bfsv2(graph, src_node);
     print_distance_prev(graph);
 
     //print_graph(graph);
