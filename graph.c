@@ -298,18 +298,17 @@ void bfsv2(graph *g, int srcNodeId)
     // push initial node onto queue for searching
     node *src = &g->nodes[srcNodeId];
     src->visited = true;
-    src->prevNodeId = -1;
 
     queue_push(q, srcNodeId);
 
-    bool found = true;
-
     // look over nodes
-    while (found)
+    while (true)
     {
+        bool found;
         int n_id = (int)queue_pop(q, &found);
-        if (n_id == -1)
+        if (!found)
             break;
+
         node *n = &g->nodes[n_id];
         n->visited = true;
 
