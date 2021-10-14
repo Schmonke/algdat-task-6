@@ -564,12 +564,12 @@ int main(int argc, const char *argv[])
         return 1;
     }
 
-    //stack *s = topo_DFS_iter(graph);
-    // print_stack(s);
-    //stack_free(s);
+    stack *s = topo_DFS_iter(graph);
+    print_stack(s);
+    stack_free(s);
 
     bfsv2(graph, src_node);
-    //print_bfs_result(graph);
+    print_bfs_result(graph);
 
     graph_free(graph);
 
