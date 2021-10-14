@@ -37,12 +37,6 @@ typedef struct node
     int dist;
 } node;
 
-typedef struct graph
-{
-    node *nodes; 
-    int node_count;
-} graph;
-
 /**
  * Implements queue as linkedlist of queue_nodes
  */
@@ -64,6 +58,12 @@ typedef struct stack
     int count;
 } stack;
 
+typedef struct graph
+{
+    node *nodes; 
+    int node_count;
+} graph;
+
 edge *new_edge(int dst_node_id, edge* next)
 {
     edge* e = malloc(sizeof(edge));
@@ -72,35 +72,9 @@ edge *new_edge(int dst_node_id, edge* next)
     return e;
 }
 
-void graph_reset_flags(graph *g)
-{
-    for(int i = 0; i < g->node_count; i++)
-    {
-        g->nodes[i].visited = false;
-        g->nodes[i].prevNodeId = -1;
-        g->nodes[i].dist = 0;
-    }
-}
-
-void graph_free(graph *g)
-{
-    for (int i = 0; i < g->node_count; i++)
-    {
-        edge *e = g->nodes[i].edges;
-        while (e)
-        {
-            edge *next = e->next;
-            free(e);
-            e = next;
-        }
-    }
-    free(g->nodes);
-    free(g);
-}
-
 /**
  * Adds an edge to the front of the linked list.
- * Adds to front insteda of back because its more 
+ * Adds to front insted of back because its more 
  * efficient and the list order is irelevant. 
  */
 void edge_add(node *n, int dst_node_id)
@@ -108,16 +82,23 @@ void edge_add(node *n, int dst_node_id)
     n->edges = new_edge(dst_node_id, n->edges);
 }
 
+int edge_count(node* n)
+{
+    int count;
+    for (edge *e = n->edges; e; e=e->next) count++;
+    return count;
+}
+
 queue *new_queue()
 {
-    queue *q = calloc(1, sizeof(queue));
+    queue *q = malloc(sizeof(queue));
     q->head = NULL;
     return q;
 }
 
 queue_node *new_queue_node(int data, queue_node *next)
 {
-    queue_node *qn = calloc(1, sizeof(queue_node));
+    queue_node *qn = malloc(sizeof(queue_node));
     qn->data = data;
     qn->next = next;
     return qn;
@@ -142,19 +123,6 @@ void queue_push(queue *q, int node_id)
     }
 }
 
-/**
- * Returns the first value in the queue without changing the queue.
- * 
- */
-// int queue_peek(queue *q)
-// {
-//     if (q->count == 0)
-//     {
-//         return 0;
-//     }
-//     return q->head->data;
-// }
-
 int queue_peek(queue *q, bool *found)
 {
     if (q->head == NULL)
@@ -170,19 +138,6 @@ int queue_peek(queue *q, bool *found)
  * Removes and returns first value in the queue.
  * Shifts the head to point to next queue_node.  
  */
-// int queue_pop(queue *q)
-// {
-//     if (q->count == 0) return 0;
-
-//     int result = queue_peek(q);
-//     queue_node *old_node = q->head;
-//     q->head = q->head->next;
-//     q->count--;
-//     free(old_node); //free the node that got popped. 
-//     //printf("%d", result);
-//     return result;
-// }
-
 int queue_pop(queue *q, bool *found)
 {
     bool f = false;
@@ -256,40 +211,35 @@ void print_stack(stack *s)
     printf("\n");
 }
 
-//Datastructure for search
-#define infinity 1000000000
-
-int count_edges(node* n)
+void graph_reset_flags(graph *g)
 {
-    int count;
-    edge *temp = n->edges;
-    while (temp!=NULL)
+    for(int i = 0; i < g->node_count; i++)
     {
-        count++;
-        temp=temp->next;
-    }  
-    return count;
+        g->nodes[i].visited = false;
+        g->nodes[i].prevNodeId = -1;
+        g->nodes[i].dist = 0;
+    }
 }
 
-//Do we need this method????
-void set_text_value(node *n, void *text)
+void graph_free(graph *g)
 {
-    n->text=(char*) text;
+    for (int i = 0; i < g->node_count; i++)
+    {
+        edge *e = g->nodes[i].edges;
+        while (e)
+        {
+            edge *next = e->next;
+            free(e);
+            e = next;
+        }
+    }
+    free(g->nodes);
+    free(g);
 }
 
 /**
- * What to do: 
- *  Reset graphs flags.
- *  Start in sorcenode, loop throug this node's edges and
- * flag each in turn.
- *  After all edges are flagged, go to the node connected 
- * to first the edge. 
- *  Stop when each node in a layer have edges only pointing
- * to already visited nodes. 
- * 
  * Use queue as holder of nodes to use. 
  * It represents the order the nodes are visited. 
- * 
  */
 void bfsv2(graph *g, int srcNodeId)
 {
@@ -311,28 +261,22 @@ void bfsv2(graph *g, int srcNodeId)
     {
         int n_id = (int)queue_pop(q, &found);
         if(n_id == -1) break;
-        //printf(":%d\n",n_id);
         node *n = &g->nodes[n_id];
         n->visited = true;
 
         // look over edges and push to queue
-        edge *e = n->edges;
-        //printf(":::%d\n", e->dst_node_id);
-        while (e != NULL) //Stops when all edges of a node are visited.
+        
+        for(edge *e = n->edges; e; e = e->next) //Stops when all edges of a node are visited.
         {
             int targetNodeId = e->dst_node_id;
-            //printf(":::%d\n",targetNodeId);
             node *target = &g->nodes[targetNodeId];
-            e = e->next;
             
-            // push for deeper search if not already visited
             if (target->visited) continue;
 
             target->prevNodeId = n_id;
             target->dist = n->dist + 1;
             queue_push(q, targetNodeId);
             target->visited = true;
-            //printf(":%d -> %d\n", target->prevNodeId, targetNodeId);
         }
     }
     queue_free(q);
@@ -348,76 +292,84 @@ void print_distance_prev(graph *g)
     }
 }
 
-// void dfs_rec(graph *g, stack *s, int node_id)
-// {
-//     node *top_node = &g->nodes[node_id];
-//     if (!top_node->visited)
-//     {
-//         //printf("%d\n", count++);
-//         top_node->visited = true;
-//         for (edge *e=top_node->edges; e; e=e->next)
-//         {
-//             int next_id = e->dst_node_id; //3
-//             node *inner_node = &g->nodes[next_id];
-//             if (!inner_node->visited)
-//             {
-//                 //printf("Calling rec - node: %d\n", next_id);
-//                 dfs_rec(g, s, next_id);
-//             }
-//         }
-//         //printf("%d\n", node_id);
-//         stack_push(s, node_id);
-//     }
-// }
-
-
-int topo_iter(graph *g, stack *res_s, stack *temp_s, int node_id)
+/**
+ * Original solution with recursion.
+ * Not used because of potential stackoverflow with larger files. 
+ */
+void DFS_rec(graph *g, stack *s, int node_id)
 {
-    printf("\nCurrent level: %d\n", node_id);
     node *top_node = &g->nodes[node_id];
-    // for (edge *e=top_node->edges; e; e=e->next)
-    // {
-    //     printf("%d\n", e->dst_node_id);
-    // }
-    
-    edge *e=top_node->edges;
     if (!top_node->visited)
     {
-        top_node->visited = true;        
+        top_node->visited = true;
+        for (edge *e=top_node->edges; e; e=e->next)
+        {
+            int next_id = e->dst_node_id;
+            node *inner_node = &g->nodes[next_id];
+            if (!inner_node->visited)
+            {
+                DFS_rec(g, s, next_id);
+            }
+        }
+        stack_push(s, node_id);
     }
+}
+
+stack *topo_DFS_rec(graph *g)
+{
+    stack *s = new_stack(g->node_count);
+
+    graph_reset_flags(g);
+
+    for(int i = 0; i < g->node_count; i++)
+    {
+        DFS_rec(g, s, i);
+    }
+    return s;
+}
+
+/**
+ * Flags each specified node as visited.
+ * Iterates throug each edge of specified node until it finds an
+ * unvisited node. This node's id is set as the next id to search
+ * and consequently pushed to temp_s. 
+ * 
+ * If a specified node does not have specified edges, or all
+ * it's edges leads to visited nodes, then:
+ *  - temp_s gets poped and it's node id is pushed on the res_s. 
+ *  - the next id is set to the next element in temp_s.
+ */
+int DFS_iter(graph *g, stack *res_s, stack *temp_s, int node_id)
+{
+    int next_id;
+    node *top_node = &g->nodes[node_id];
+    edge *e=top_node->edges;
+    top_node->visited = true;
+
     for (; e; e=e->next)
     {
-        //printf("::%d\n", node_id);
-        //printf("%d\n", e->dst_node_id);
-        int next_id = e->dst_node_id;
-        node_id = next_id;
-        printf("Checking nodeflag for: %d\n", next_id);
+        next_id = e->dst_node_id;
         node *inner_node = &g->nodes[next_id];
         if (!inner_node->visited)
         {
-            printf("Calling temp_s PUSH - node: %d\n", next_id);
             stack_push(temp_s, next_id);
-            
-            //node_id = stack_peek(temp_s);
             break;
         }
-        
-        //printf("::G\n");
     }
-    //printf(":%d\n", temp_s->count);
-    if(e== NULL && temp_s->count > 0)
+    if(e == NULL)
     {
-        //printf("::::%d\n", node_id);
-        node *node = &g->nodes[stack_pop(temp_s)];
-        printf("Poped: %d, stack_count: %d\n", node->node_number, temp_s->count);
-        node_id = stack_peek(temp_s);
-        printf("Going back up to: %d\n", node_id);
-        stack_push(res_s, node->node_number);
+        stack_push(res_s, g->nodes[stack_pop(temp_s)].node_number);
+        next_id = stack_peek(temp_s);
     }
-    return node_id;
+    return next_id;
 }
- 
-stack *dfs_topo(graph *g, int node_id)
+/**
+ * By default each iteration starts with an empty temporary stack (temp_s)
+ * If the iterations number is not visited yet, it is pushed on the stack
+ * and the DFS search will commence in the while loop. 
+ * Else the next iteration begins. 
+ */
+stack *topo_DFS_iter(graph *g)
 {
     graph_reset_flags(g);
 
@@ -426,17 +378,15 @@ stack *dfs_topo(graph *g, int node_id)
 
     for(int i = 0; i < g->node_count; i++)
     {
-        printf("\n\nITERATION: %d\n", i);
-        int id = i;
-        if(!g->nodes[id].visited)
+        int start_id = i;
+        if(!g->nodes[start_id].visited) 
         {
-            stack_push(temp_s, id);
+            stack_push(temp_s, start_id);
         }
         while (temp_s->count > 0)
         {
-            id = topo_iter(g, res_s, temp_s, id);
+            start_id = DFS_iter(g, res_s, temp_s, start_id);
         }
-        
     }
     stack_free(temp_s);
     return res_s;
@@ -527,7 +477,7 @@ graph *parse_graphfile(const char *graphfile)
     int edge_count = atoi(&data[i]);
     find_next_token(data, length, &i);
     
-    graph *g = calloc(1, sizeof(graph));
+    graph *g = malloc(sizeof(graph));
     g->node_count = node_count;
     g->nodes = calloc(node_count, sizeof(node));
 
@@ -618,7 +568,7 @@ int main(int argc, const char *argv[])
     }
     graph* graph = parse_graph(graphfile, namefile);
     
-    stack *s = dfs_topo(graph, src_node);
+    stack *s = topo_DFS_iter(graph);
     print_stack(s);
     stack_free(s);
 
