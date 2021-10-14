@@ -228,7 +228,7 @@ int stack_peek(stack *s)
 {
     if (s->count == 0)
     {
-        return 0;
+        return -1;
     }
     return s->elems[s->count - 1];
 }
@@ -373,7 +373,6 @@ void print_distance_prev(graph *g)
 
 int topo_iter(graph *g, stack *res_s, stack *temp_s, int node_id)
 {
-    
     printf("\nCurrent level: %d\n", node_id);
     node *top_node = &g->nodes[node_id];
     // for (edge *e=top_node->edges; e; e=e->next)
@@ -427,14 +426,17 @@ stack *dfs_topo(graph *g, int node_id)
 
     for(int i = 0; i < g->node_count; i++)
     {
-        //printf(":%d\n", node_id);
+        printf("\n\nITERATION: %d\n", i);
         int id = i;
-        do
+        if(!g->nodes[id].visited)
+        {
+            stack_push(temp_s, id);
+        }
+        while (temp_s->count > 0)
         {
             id = topo_iter(g, res_s, temp_s, id);
-            
-        } while (temp_s->count > 0);
-        printf("MONKA");
+        }
+        
     }
     stack_free(temp_s);
     return res_s;
