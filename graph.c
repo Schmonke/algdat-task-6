@@ -24,6 +24,9 @@ typedef struct edge
     int dst_node_id;
 } edge;
 
+/**
+ * Node containing a linked list of the edges connected to that node.
+ */
 typedef struct node
 {
     char *text;
@@ -50,6 +53,9 @@ typedef struct queue
     struct queue_node *head;
 } queue;
 
+/**
+ * Stack used by DFS for Topological Sort
+ */
 typedef struct stack
 {
     int *elems;
@@ -57,12 +63,18 @@ typedef struct stack
     int count;
 } stack;
 
+/**
+ * Graph containing all nodes read from file
+ */
 typedef struct graph
 {
     node *nodes;
     int node_count;
 } graph;
 
+/**
+ * Constructor for a new edge
+ */
 edge *new_edge(int dst_node_id, edge *next)
 {
     edge *e = malloc(sizeof(edge));
@@ -81,14 +93,20 @@ void edge_add(node *n, int dst_node_id)
     n->edges = new_edge(dst_node_id, n->edges);
 }
 
+/**
+ * Function to count the edges in the graph
+ */
 int edge_count(node *n)
 {
-    int count;
+    int count = 0;
     for (edge *e = n->edges; e; e = e->next)
         count++;
     return count;
 }
 
+/**
+ * Creates a new queue.
+ */
 queue *new_queue()
 {
     queue *q = malloc(sizeof(queue));
@@ -96,6 +114,9 @@ queue *new_queue()
     return q;
 }
 
+/**
+ * Creates a new queue_node.
+ */
 queue_node *new_queue_node(int data, queue_node *next)
 {
     queue_node *qn = malloc(sizeof(queue_node));
@@ -104,25 +125,24 @@ queue_node *new_queue_node(int data, queue_node *next)
     return qn;
 }
 
+/**
+ * Pushes a node_id onto the queue.
+ */
 void queue_push(queue *q, int node_id)
 {
     queue_node *qn = new_queue_node(node_id, NULL);
 
-    if (q->head)
+    queue_node **node = &q->head;
+    while (*node != NULL)
     {
-        queue_node *head = q->head;
-        while (head->next)
-        {
-            head = head->next;
-        }
-        head->next = qn;
+        node = &(*node)->next;
     }
-    else
-    {
-        q->head = qn;
-    }
+    *node = qn;
 }
 
+/**
+ * Peeks the bottom-most (first) element on the queue.
+ */
 int queue_peek(queue *q, bool *found)
 {
     if (q->head == NULL)
@@ -155,6 +175,9 @@ int queue_pop(queue *q, bool *found)
     return result;
 }
 
+/**
+ * Frees the memory of the queue before a new que is made.
+ */
 void queue_free(queue *q)
 {
     queue_node *head = q->head;
@@ -167,6 +190,9 @@ void queue_free(queue *q)
     free(q);
 }
 
+/**
+ * Creates a new stack.
+ */
 stack *new_stack(int capacity)
 {
     stack *s = malloc(sizeof(stack));
@@ -176,12 +202,18 @@ stack *new_stack(int capacity)
     return s;
 }
 
+/**
+ * Pushes an element onto the stack.
+ */
 void stack_push(stack *s, int elem)
 {
     s->elems[s->count] = elem;
     s->count++;
 }
 
+/**
+ * Peeks the top-most element on the stack.
+ */
 int stack_peek(stack *s)
 {
     if (s->count == 0)
@@ -191,19 +223,28 @@ int stack_peek(stack *s)
     return s->elems[s->count - 1];
 }
 
+/**
+ * Pops the topmost element from the stack.
+ */
 int stack_pop(stack *s)
 {
     int result = stack_peek(s);
-    s->count--;
+    if (result >= 0)
+        s->count--;
     return result;
 }
 
+/**
+ * Frees the memory allocated by the elements in the stack
+ */
 void stack_free(stack *s)
 {
     free(s->elems);
     free(s);
 }
-
+/**
+ * Prints the stack
+ */
 void print_stack(stack *s)
 {
     printf("Topological order: ");
@@ -214,6 +255,10 @@ void print_stack(stack *s)
     printf("\n");
 }
 
+/**
+ * Resets the visited flags on the nodes before starting a search
+ * with BFS or DFS/Topo Sort
+ */
 void graph_reset_flags(graph *g)
 {
     for (int i = 0; i < g->node_count; i++)
@@ -223,7 +268,9 @@ void graph_reset_flags(graph *g)
         g->nodes[i].dist = 0;
     }
 }
-
+/**
+ * Frees the memory allocated previously allocated from the graph
+ */
 void graph_free(graph *g)
 {
     for (int i = 0; i < g->node_count; i++)
@@ -287,7 +334,10 @@ void bfsv2(graph *g, int srcNodeId)
     queue_free(q);
 }
 
-void print_distance_prev(graph *g)
+/**
+ * Prints the results of BFS.
+ */
+void print_bfs_result(graph *g)
 {
     printf("%-5s | %-5s | %-5s\n", "Node", "Prev", "Dist");
     for (int i = 0; i < g->node_count; i++)
@@ -319,7 +369,11 @@ void DFS_rec(graph *g, stack *s, int node_id)
         stack_push(s, node_id);
     }
 }
-
+/**
+ * Constructs the stack for the DFS/Topo sort
+ * resets visited flags
+ * Uses dfs with recursion
+ */
 stack *topo_DFS_rec(graph *g)
 {
     stack *s = new_stack(g->node_count);
@@ -398,7 +452,7 @@ stack *topo_DFS_iter(graph *g)
 }
 
 /**
- * Parsing and stuff
+ * Find the next non-space token.
  */
 bool find_next_token(char *data, int length, int *index)
 {
@@ -421,37 +475,9 @@ bool find_next_token(char *data, int length, int *index)
     return nextline;
 }
 
-char *parse_string(char *data, int length, int *index)
-{
-    int i = *index;
-    if (i >= length)
-        return NULL;
-    if (data[i] != '\"')
-        return NULL;
-
-    int start = ++i;
-    int slen = -1;
-
-    for (int i = start; i < length; i++)
-    {
-        if (data[i] == '\"')
-        {
-            slen = (i - start);
-            break;
-        }
-    }
-    if (slen == -1)
-    {
-        return NULL;
-    }
-    *index = i;
-
-    char *str = malloc(slen + 1);
-    str[slen] = '\0';
-    memcpy(str, &data[start], slen);
-    return str;
-}
-
+/**
+ * Maps a file to memory.
+ */
 char *mmap_file(const char *filename, int *length)
 {
     int fd;
@@ -461,13 +487,16 @@ char *mmap_file(const char *filename, int *length)
     }
     int len = lseek(fd, 0, SEEK_END);
     lseek(fd, 0, SEEK_SET);
-    char *data = (char *)mmap(NULL, len, PROT_READ, MAP_PRIVATE, fd, 0); //NULL means the kernel picks starting addr
+    char *data = (char *)mmap(NULL, len, PROT_READ, MAP_PRIVATE, fd, 0);
     close(fd);
 
     *length = len;
     return data;
 }
 
+/**
+ * Parses the graphfile into a graph.
+ */
 graph *parse_graphfile(const char *graphfile)
 {
     int i = 0;
@@ -509,57 +538,9 @@ graph *parse_graphfile(const char *graphfile)
 
         if (find_next_token(data, length, &i))
             continue;
-        if (node_id < node_count)
-        {
-            g->nodes[node_id].text = parse_string(data, length, &i);
-        }
     }
 
     munmap(data, length);
-    return g;
-}
-
-void parse_namefile(graph *g, const char *graphfile)
-{
-    int i = 0;
-    int length;
-    char *data = mmap_file(graphfile, &length);
-
-    // read header line
-    int node_count = atoi(&data[i]);
-    find_next_token(data, length, &i);
-
-    for (int l = 0; i < length; l++)
-    {
-        int node_id = atoi(&data[i]);
-
-        if (find_next_token(data, length, &i))
-            continue;
-        if (find_next_token(data, length, &i))
-            continue;
-
-        if (node_id < node_count)
-        {
-            g->nodes[node_id].text = parse_string(data, length, &i);
-        }
-
-        find_next_token(data, length, &i);
-    }
-
-    munmap(data, length);
-}
-
-graph *parse_graph(const char *graphfile, const char *namefile)
-{
-    graph *g = parse_graphfile(graphfile);
-    if (g == NULL)
-    {
-        perror("Failed to parse graph file");
-    }
-    if (namefile != NULL)
-    {
-        parse_namefile(g, namefile);
-    }
     return g;
 }
 
@@ -567,23 +548,28 @@ int main(int argc, const char *argv[])
 {
     const int src_node = argc > 1 ? atoi(argv[1]) : -1;
     const char *graphfile = argc > 2 ? argv[2] : NULL;
-    const char *namefile = argc > 3 ? argv[3] : NULL;
 
     if (src_node == -1 || graphfile == NULL)
     {
         printf(
             "You must provide a graph file and optionally a name file.\n"
-            "Usage: ./graph <src-node> <graphfile> [namefile]\n");
+            "Usage: ./graph <src-node> <graphfile>\n");
         return 1;
     }
-    graph *graph = parse_graph(graphfile, namefile);
 
-    stack *s = topo_DFS_iter(graph);
-    print_stack(s);
-    stack_free(s);
+    graph *graph = parse_graphfile(graphfile);
+    if (graph == NULL)
+    {
+        perror("Failed to parse graph file");
+        return 1;
+    }
+
+    //stack *s = topo_DFS_iter(graph);
+    // print_stack(s);
+    //stack_free(s);
 
     bfsv2(graph, src_node);
-    print_distance_prev(graph);
+    //print_bfs_result(graph);
 
     graph_free(graph);
 
