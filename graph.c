@@ -10,7 +10,6 @@
 #include <string.h>
 #include <sys/mman.h>
 
-
 /* Edge represents connection between two nodes
  * Graph contains an array of nodes, and each node contains a linked-list of edges
  * where each edge says which node it points to.
@@ -27,7 +26,7 @@ typedef struct edge
 
 typedef struct node
 {
-    char* text;
+    char *text;
     int node_number;
     struct edge *edges;
 
@@ -43,7 +42,7 @@ typedef struct node
 typedef struct queue_node
 {
     int data;
-    struct queue_node * next;
+    struct queue_node *next;
 } queue_node;
 
 typedef struct queue
@@ -60,13 +59,13 @@ typedef struct stack
 
 typedef struct graph
 {
-    node *nodes; 
+    node *nodes;
     int node_count;
 } graph;
 
-edge *new_edge(int dst_node_id, edge* next)
+edge *new_edge(int dst_node_id, edge *next)
 {
-    edge* e = malloc(sizeof(edge));
+    edge *e = malloc(sizeof(edge));
     e->dst_node_id = dst_node_id;
     e->next = next;
     return e;
@@ -82,10 +81,11 @@ void edge_add(node *n, int dst_node_id)
     n->edges = new_edge(dst_node_id, n->edges);
 }
 
-int edge_count(node* n)
+int edge_count(node *n)
 {
     int count;
-    for (edge *e = n->edges; e; e=e->next) count++;
+    for (edge *e = n->edges; e; e = e->next)
+        count++;
     return count;
 }
 
@@ -108,13 +108,13 @@ void queue_push(queue *q, int node_id)
 {
     queue_node *qn = new_queue_node(node_id, NULL);
 
-    if(q->head)
+    if (q->head)
     {
         queue_node *head = q->head;
         while (head->next)
         {
             head = head->next;
-        } 
+        }
         head->next = qn;
     }
     else
@@ -127,10 +127,12 @@ int queue_peek(queue *q, bool *found)
 {
     if (q->head == NULL)
     {
-        if (found != NULL) *found = false;
+        if (found != NULL)
+            *found = false;
         return -1;
     }
-    if (found != NULL) *found = true;
+    if (found != NULL)
+        *found = true;
     return q->head->data;
 }
 
@@ -142,12 +144,13 @@ int queue_pop(queue *q, bool *found)
 {
     bool f = false;
     int result = queue_peek(q, &f);
-    if(result > -1) 
+    if (result > -1)
     {
         queue_node *old_node = q->head;
         q->head = q->head->next;
         free(old_node);
-        if (found != NULL) *found = f;
+        if (found != NULL)
+            *found = f;
     }
     return result;
 }
@@ -156,11 +159,11 @@ void queue_free(queue *q)
 {
     queue_node *head = q->head;
     while (head)
-        {
-            queue_node *old_node = head;
-            head = head->next;
-            free(old_node);
-        }
+    {
+        queue_node *old_node = head;
+        head = head->next;
+        free(old_node);
+    }
     free(q);
 }
 
@@ -213,7 +216,7 @@ void print_stack(stack *s)
 
 void graph_reset_flags(graph *g)
 {
-    for(int i = 0; i < g->node_count; i++)
+    for (int i = 0; i < g->node_count; i++)
     {
         g->nodes[i].visited = false;
         g->nodes[i].prevNodeId = -1;
@@ -244,9 +247,9 @@ void graph_free(graph *g)
 void bfsv2(graph *g, int srcNodeId)
 {
     graph_reset_flags(g);
-    
+
     queue *q = new_queue();
-    
+
     // push initial node onto queue for searching
     node *src = &g->nodes[srcNodeId];
     src->visited = true;
@@ -255,23 +258,25 @@ void bfsv2(graph *g, int srcNodeId)
     queue_push(q, srcNodeId);
 
     bool found = true;
-    
+
     // look over nodes
     while (found)
     {
         int n_id = (int)queue_pop(q, &found);
-        if(n_id == -1) break;
+        if (n_id == -1)
+            break;
         node *n = &g->nodes[n_id];
         n->visited = true;
 
         // look over edges and push to queue
-        
-        for(edge *e = n->edges; e; e = e->next) //Stops when all edges of a node are visited.
+
+        for (edge *e = n->edges; e; e = e->next) //Stops when all edges of a node are visited.
         {
             int targetNodeId = e->dst_node_id;
             node *target = &g->nodes[targetNodeId];
-            
-            if (target->visited) continue;
+
+            if (target->visited)
+                continue;
 
             target->prevNodeId = n_id;
             target->dist = n->dist + 1;
@@ -285,7 +290,7 @@ void bfsv2(graph *g, int srcNodeId)
 void print_distance_prev(graph *g)
 {
     printf("%-5s | %-5s | %-5s\n", "Node", "Prev", "Dist");
-    for(int i=0; i < g->node_count; i++)
+    for (int i = 0; i < g->node_count; i++)
     {
         node *n = &g->nodes[i];
         printf("%5d | %5d | %5d\n", n->node_number, n->prevNodeId, n->dist);
@@ -302,7 +307,7 @@ void DFS_rec(graph *g, stack *s, int node_id)
     if (!top_node->visited)
     {
         top_node->visited = true;
-        for (edge *e=top_node->edges; e; e=e->next)
+        for (edge *e = top_node->edges; e; e = e->next)
         {
             int next_id = e->dst_node_id;
             node *inner_node = &g->nodes[next_id];
@@ -321,7 +326,7 @@ stack *topo_DFS_rec(graph *g)
 
     graph_reset_flags(g);
 
-    for(int i = 0; i < g->node_count; i++)
+    for (int i = 0; i < g->node_count; i++)
     {
         DFS_rec(g, s, i);
     }
@@ -343,10 +348,10 @@ int DFS_iter(graph *g, stack *res_s, stack *temp_s, int node_id)
 {
     int next_id;
     node *top_node = &g->nodes[node_id];
-    edge *e=top_node->edges;
+    edge *e = top_node->edges;
     top_node->visited = true;
 
-    for (; e; e=e->next)
+    for (; e; e = e->next)
     {
         next_id = e->dst_node_id;
         node *inner_node = &g->nodes[next_id];
@@ -356,7 +361,7 @@ int DFS_iter(graph *g, stack *res_s, stack *temp_s, int node_id)
             break;
         }
     }
-    if(e == NULL)
+    if (e == NULL)
     {
         stack_push(res_s, g->nodes[stack_pop(temp_s)].node_number);
         next_id = stack_peek(temp_s);
@@ -376,10 +381,10 @@ stack *topo_DFS_iter(graph *g)
     stack *temp_s = new_stack(g->node_count);
     stack *res_s = new_stack(g->node_count);
 
-    for(int i = 0; i < g->node_count; i++)
+    for (int i = 0; i < g->node_count; i++)
     {
         int start_id = i;
-        if(!g->nodes[start_id].visited) 
+        if (!g->nodes[start_id].visited)
         {
             stack_push(temp_s, start_id);
         }
@@ -397,7 +402,7 @@ stack *topo_DFS_iter(graph *g)
  */
 bool find_next_token(char *data, int length, int *index)
 {
-    bool nextline = false;  
+    bool nextline = false;
     int i = *index;
     while (i < length && !isspace(data[i]))
     {
@@ -419,8 +424,10 @@ bool find_next_token(char *data, int length, int *index)
 char *parse_string(char *data, int length, int *index)
 {
     int i = *index;
-    if (i >= length) return NULL;
-    if (data[i] != '\"') return NULL;
+    if (i >= length)
+        return NULL;
+    if (data[i] != '\"')
+        return NULL;
 
     int start = ++i;
     int slen = -1;
@@ -454,9 +461,9 @@ char *mmap_file(const char *filename, int *length)
     }
     int len = lseek(fd, 0, SEEK_END);
     lseek(fd, 0, SEEK_SET);
-    char *data = (char*)mmap(NULL, len, PROT_READ, MAP_PRIVATE, fd, 0); //NULL means the kernel picks starting addr
+    char *data = (char *)mmap(NULL, len, PROT_READ, MAP_PRIVATE, fd, 0); //NULL means the kernel picks starting addr
     close(fd);
-    
+
     *length = len;
     return data;
 }
@@ -476,7 +483,7 @@ graph *parse_graphfile(const char *graphfile)
     find_next_token(data, length, &i);
     int edge_count = atoi(&data[i]);
     find_next_token(data, length, &i);
-    
+
     graph *g = malloc(sizeof(graph));
     g->node_count = node_count;
     g->nodes = calloc(node_count, sizeof(node));
@@ -485,12 +492,13 @@ graph *parse_graphfile(const char *graphfile)
     {
         g->nodes[i].node_number = i;
     }
-    
+
     while (i < length)
     {
         int node_id = atoi(&data[i]);
 
-        if (find_next_token(data, length, &i)) continue;
+        if (find_next_token(data, length, &i))
+            continue;
         int edge_dst_id = atoi(&data[i]);
         if (node_id < node_count && edge_dst_id < node_count)
         {
@@ -498,8 +506,9 @@ graph *parse_graphfile(const char *graphfile)
             n->node_number = node_id;
             edge_add(n, edge_dst_id);
         }
-        
-        if (find_next_token(data, length, &i)) continue;
+
+        if (find_next_token(data, length, &i))
+            continue;
         if (node_id < node_count)
         {
             g->nodes[node_id].text = parse_string(data, length, &i);
@@ -524,8 +533,10 @@ void parse_namefile(graph *g, const char *graphfile)
     {
         int node_id = atoi(&data[i]);
 
-        if (find_next_token(data, length, &i)) continue;
-        if (find_next_token(data, length, &i)) continue;
+        if (find_next_token(data, length, &i))
+            continue;
+        if (find_next_token(data, length, &i))
+            continue;
 
         if (node_id < node_count)
         {
@@ -538,7 +549,7 @@ void parse_namefile(graph *g, const char *graphfile)
     munmap(data, length);
 }
 
-graph* parse_graph(const char *graphfile, const char *namefile)
+graph *parse_graph(const char *graphfile, const char *namefile)
 {
     graph *g = parse_graphfile(graphfile);
     if (g == NULL)
@@ -562,12 +573,11 @@ int main(int argc, const char *argv[])
     {
         printf(
             "You must provide a graph file and optionally a name file.\n"
-            "Usage: ./graph <src-node> <dst-node> <graphfile> [namefile]\n"
-        );
+            "Usage: ./graph <src-node> <graphfile> [namefile]\n");
         return 1;
     }
-    graph* graph = parse_graph(graphfile, namefile);
-    
+    graph *graph = parse_graph(graphfile, namefile);
+
     stack *s = topo_DFS_iter(graph);
     print_stack(s);
     stack_free(s);
@@ -576,6 +586,6 @@ int main(int argc, const char *argv[])
     print_distance_prev(graph);
 
     graph_free(graph);
-    
+
     return 0;
 }
