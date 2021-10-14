@@ -371,48 +371,49 @@ void print_distance_prev(graph *g)
 // }
 
 
-int some_func(graph *g, stack *res_s, stack *temp_s, int node_id)
+int topo_iter(graph *g, stack *res_s, stack *temp_s, int node_id)
 {
-    //printf("::%d\n", temp_s->count);
+    
+    printf("\nCurrent level: %d\n", node_id);
     node *top_node = &g->nodes[node_id];
     // for (edge *e=top_node->edges; e; e=e->next)
     // {
     //     printf("%d\n", e->dst_node_id);
     // }
+    
+    edge *e=top_node->edges;
     if (!top_node->visited)
     {
-        top_node->visited = true;
-        for (edge *e=top_node->edges; e; e=e->next)
+        top_node->visited = true;        
+    }
+    for (; e; e=e->next)
+    {
+        //printf("::%d\n", node_id);
+        //printf("%d\n", e->dst_node_id);
+        int next_id = e->dst_node_id;
+        node_id = next_id;
+        printf("Checking nodeflag for: %d\n", next_id);
+        node *inner_node = &g->nodes[next_id];
+        if (!inner_node->visited)
         {
-            //printf("%d\n", e->dst_node_id);
-            int next_id = e->dst_node_id;
-            node_id = next_id;
-            //printf("::%d\n", next_id);
-            node *inner_node = &g->nodes[next_id];
-            if (!inner_node->visited)
-            {
-                //printf("Calling temp_s PUSH - node: %d\n", next_id);
-                stack_push(temp_s, next_id);
-                
-                //node_id = stack_peek(temp_s);
-                break;
-            }
+            printf("Calling temp_s PUSH - node: %d\n", next_id);
+            stack_push(temp_s, next_id);
             
-            //printf("::G\n");
+            //node_id = stack_peek(temp_s);
+            break;
         }
         
+        //printf("::G\n");
     }
-    printf(":%d\n", temp_s->count);
-    for (edge *e=top_node->edges; e; e=e->next)
+    //printf(":%d\n", temp_s->count);
+    if(e== NULL && temp_s->count > 0)
     {
-        if(e->next == NULL)
-        {
-            //printf(":::%d\n", node_id);
-            node *node = &g->nodes[stack_pop(temp_s)];
-            node_id = node->node_number;
-            //printf("::2:%d\n", node_id);
-            stack_push(res_s, node->node_number);
-        }
+        //printf("::::%d\n", node_id);
+        node *node = &g->nodes[stack_pop(temp_s)];
+        printf("Poped: %d, stack_count: %d\n", node->node_number, temp_s->count);
+        node_id = stack_peek(temp_s);
+        printf("Going back up to: %d\n", node_id);
+        stack_push(res_s, node->node_number);
     }
     return node_id;
 }
@@ -430,10 +431,10 @@ stack *dfs_topo(graph *g, int node_id)
         int id = i;
         do
         {
-            id = some_func(g, res_s, temp_s, id);
+            id = topo_iter(g, res_s, temp_s, id);
             
         } while (temp_s->count > 0);
-        
+        printf("MONKA");
     }
     stack_free(temp_s);
     return res_s;
