@@ -39,18 +39,14 @@ typedef struct node
     int dist;
 } node;
 
-/**
- * Implements queue as linkedlist of queue_nodes
- */
-typedef struct queue_node
-{
-    int data;
-    struct queue_node *next;
-} queue_node;
-
+const int QUEUE_DEFAULT_CAPACITY = 16;
 typedef struct queue
 {
-    struct queue_node *head;
+    int capacity;
+    int count;
+    int write_index;
+    int read_index;
+    int *elems;
 } queue;
 
 /**
@@ -110,19 +106,12 @@ int edge_count(node *n)
 queue *new_queue()
 {
     queue *q = malloc(sizeof(queue));
-    q->head = NULL;
+    q->capacity = QUEUE_DEFAULT_CAPACITY;
+    q->elems = malloc(sizeof(int) * QUEUE_DEFAULT_CAPACITY);
+    q->count = 0;
+    q->write_index = 0;
+    q->read_index = 0;
     return q;
-}
-
-/**
- * Creates a new queue_node.
- */
-queue_node *new_queue_node(int data, queue_node *next)
-{
-    queue_node *qn = malloc(sizeof(queue_node));
-    qn->data = data;
-    qn->next = next;
-    return qn;
 }
 
 /**
@@ -130,14 +119,30 @@ queue_node *new_queue_node(int data, queue_node *next)
  */
 void queue_push(queue *q, int node_id)
 {
-    queue_node *qn = new_queue_node(node_id, NULL);
-
-    queue_node **node = &q->head;
-    while (*node != NULL)
+    if (q->count == q->capacity)
     {
-        node = &(*node)->next;
+        int old_capacity = q->capacity;
+        int new_capacity = q->capacity * 2;
+        int *new_elems = malloc(sizeof(int) * new_capacity);
+
+        int cp = q->read_index;
+        int t = 0;
+        while (t != q->count)
+        {
+            new_elems[t] = q->elems[cp];
+            cp = (cp + 1) % old_capacity;
+            t++;
+        }
+        free(q->elems);
+
+        q->capacity = new_capacity;
+        q->elems = new_elems;
+        q->read_index = 0;
+        q->write_index = t;
     }
-    *node = qn;
+    q->elems[q->write_index] = node_id;
+    q->write_index = (q->write_index + 1) % q->capacity;
+    q->count++;
 }
 
 /**
@@ -145,15 +150,15 @@ void queue_push(queue *q, int node_id)
  */
 int queue_peek(queue *q, bool *found)
 {
-    if (q->head == NULL)
+    if (q->count == 0)
     {
         if (found != NULL)
             *found = false;
-        return -1;
+        return 0;
     }
     if (found != NULL)
         *found = true;
-    return q->head->data;
+    return q->elems[q->read_index];
 }
 
 /**
@@ -162,17 +167,16 @@ int queue_peek(queue *q, bool *found)
  */
 int queue_pop(queue *q, bool *found)
 {
-    bool f = false;
-    int result = queue_peek(q, &f);
-    if (result > -1)
+    bool f;
+    int elem = queue_peek(q, &f);
+    if (f)
     {
-        queue_node *old_node = q->head;
-        q->head = q->head->next;
-        free(old_node);
-        if (found != NULL)
-            *found = f;
+        q->read_index = (q->read_index + 1) % q->capacity;
+        q->count--;
     }
-    return result;
+    if (found != NULL)
+        *found = f;
+    return elem;
 }
 
 /**
@@ -180,13 +184,7 @@ int queue_pop(queue *q, bool *found)
  */
 void queue_free(queue *q)
 {
-    queue_node *head = q->head;
-    while (head)
-    {
-        queue_node *old_node = head;
-        head = head->next;
-        free(old_node);
-    }
+    free(q->elems);
     free(q);
 }
 
